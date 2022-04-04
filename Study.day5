@@ -1,0 +1,155 @@
+EX1)
+import sqlite3
+#squlite3.connect("파일의 이름") #db 파일연결
+f = sqlite3.connect("Ex2_data.db") #db 파일연결
+c = f.cursor() #시작지점확인
+#def f(data1, data2, data3):
+    #pass
+#.execute("DROP TABLE IF EXISTS 테이블의이름") #한줄작성
+c.execute("DROP TABLE IF EXISTS data") #한줄작성
+c.execute("""CREATE TABLE data(
+                                data1 text,
+                                data2 text,
+                                data3 text
+                                )""") # db의 테이블 생성
+c.execute("INSERT INTO data VALUES(:data1, :data2, :data3)",{"data1":10,"data2":20,"data3":30})
+#c.executemany() #여러줄 작성(제공된 data(list)의 길이로 반복횟수 결정)
+c.executemany("INSERT INTO data VALUES(:data1, :data2, :data3)",[{"data1":10,"data2":20,"data3":30}, {"data1":10,"data2":20,"data3":30}, {"data1":10,"data2":20,"data3":30}])
+f.commit()
+f.close() # 여기까지 저장
+
+#출력하기
+f = sqlite3.connect("Ex2_data.db")
+c = f.cursor()
+c.execute('SELECT * FROM data')
+#c.fetchall()# db에 저장되어있는 모든 데이터 꺼내는 메소드
+for i in c.fetchall():
+    print(f"data1:{i[0]}, data2:{i[1]}, data3:{i[2]}")
+
+
+EX2)
+import requests#수집
+from bs4 import BeautifulSoup#정리
+url="https://movie.naver.com/movie/point/af/list.naver?&page="#파일이름
+page=10
+r=requests.get(url+str(page))
+r.raise_for_status()#접속 상태 확인 (접속 코드 200 아닐시 예외 발생)
+soup = BeautifulSoup(r.text,"html.parser")
+data = soup.find_all("td",attrs={"class":"title"})
+data_l=[]
+for i in data:
+    if i.a:
+        data_l.append({"영화명":i.a.text,
+        "평점":i.em.text,
+        "리뷰":i.br.next_sibling.strip()})
+print(data_l)
+import sqlite3
+conn=sqlite3.connect("data_ex4.db")
+c=conn.cursor()
+c.execute('DROP TABLE IF EXISTS data')
+c.execute('''
+            CREATE TABLE data (
+            영화명 text,
+            평점 text,
+            리뷰 text                      
+            )
+        ''')
+c.executemany('INSERT INTO data VALUES (:영화명,:평점,:리뷰)', data_l)
+conn.commit()
+conn.close()
+def 출력():
+    conn = sqlite3.connect("data_ex4.db")
+    c = conn.cursor()
+    c.execute('SELECT * FROM data')
+    for i in c.fetchall():
+        print(f"영화명 {i[0]},평점 {i[1]},리뷰 {i[2]}")
+
+
+EX3)
+import sqlite3
+import requests
+from bs4 import BeautifulSoup
+
+url = 'https://finance.naver.com/sise/sise_quant.naver?sosok=1'
+r = requests.get(url)
+html_d = r.text
+soup = BeautifulSoup(html_d, 'html.parser')
+data = soup.select("td")
+db = "data.db"
+f = sqlite3.connect("Ex2_data.db")
+c = f.cursor()
+
+def 저장(db, data):
+    conn = sqlite3.connect(db)
+    c = conn.cursor()
+    c.execute('DROP TABLE IF EXISTS data')
+    c.execute('''
+                CREATE TABLE data (
+                종목 text,
+                현재가 text,
+                전일비 text,
+                등락률 text,
+                거래량 text,
+                거래대금 text,
+                매수호가 text,
+                매도호가 text,
+                시가총액 text,
+                PER text,
+                ROE text
+                    )
+             ''')
+
+    c.executemany('INSERT INTO data VALUES (:종목, :현재가, :전일비, :등락률, :거래량, :거래대금, :매수호가, :매도호가, :시가총액, :PER, :ROE)', data)
+    conn.commit()
+    conn.close()
+def 출력(db):
+    conn = sqlite3.connect(db)
+    c = conn.cursor()
+    c.execute('SELECT * FROM data')
+    for i in c.fetchall():
+        print(i)
+
+def f(n,x):
+    for i in range(x):
+        n=n.next_sibling
+    return n.text.strip()
+
+for i in data:
+    if i.a:
+        data = [{"종목": i.a.text, "현재가": f(i, 2), "전일비": f(i, 4), "등락률": f(i, 6), "거래량": f(i, 8), "거래대금": f(i, 10),
+                     "매수호가": f(i, 12), "매도호가": f(i, 14), "시가총액": f(i, 16), "PER": f(i, 18), "ROE": f(i, 20)}]
+        저장(db, data)
+        출력(db)
+
+
+EX4)
+import time
+from random import randint
+import csv
+import requests#수집
+from bs4 import BeautifulSoup#정리
+url="https://movie.naver.com/movie/point/af/list.naver?&page="#파일이름
+#파일의 내용 정리
+title = "영화명","평점","리뷰"
+f = open("save.csv", "w", encoding='utf-8-sig', newline="")
+writer = csv.writer(f)
+writer.writerow(title)
+in_data = []
+#data 수집
+for page in range(1,6):
+    print(f"page{page} 크롤링중")
+    # 1개의 page를 로드(스크레이핑)
+    r=requests.get(url+str(page))
+    r.raise_for_status()#접속 상태 확인 (접속 코드 200 아닐시 예외 발생)
+    soup = BeautifulSoup(r.text,"html.parser")
+    data = soup.find_all("td",attrs={"class":"title"})
+    #파일정리
+    for i in data:
+        if i.a:
+            in_data.append([i.a.text, i.em.text, i.br.next_sibling.strip()])
+        #단일입력
+        #in_data = [i.a.text, i.em.text, i.br.next_sibling.strip()]
+        #writer.writerow(in_data)
+    time.sleep(randint(1,5)) # 빼먹으면 큰일난다 !!!!!!!!!!!!!!!!!!!!!!!
+#저장
+writer.writerow((in_data))
